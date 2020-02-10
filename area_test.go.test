@@ -1,0 +1,54 @@
+package atf
+
+import . "launchpad.net/gocheck"
+
+//func (s *MySuite) TestNewWorkerBox(c *C) {
+//        wb := NewWorkerBox(Irrigation, 0)
+//        for _, p := range g.Players() {
+//                c.Check(wb.Workers[p.ID()], Equals, 0)
+//        }
+//        wb = NewWorkerBox(Irrigation, 1)
+//        for _, p := range g.Players() {
+//                c.Check(wb.Workers[p.ID()], Equals, 1)
+//        }
+//}
+
+func (s *MySuite) TestWorkerBoxes(c *C) {
+	for _, a := range g.Areas {
+		switch a.ID {
+		case Irrigation, Weaving:
+			for _, p := range g.Players() {
+				c.Check(p.WorkersIn(a), Equals, 1)
+			}
+		default:
+			for _, p := range g.Players() {
+				c.Check(p.WorkersIn(a), Equals, 0)
+			}
+		}
+	}
+}
+
+func (s *MySuite) TestSumerAreas(c *C) {
+	for _, a := range g.Areas {
+		if a.IsSumer() {
+                        c.Check(a.Armies, Equals, 0)
+                        c.Check(a.ArmyOwner(), IsNil)
+			c.Assert(a.City, Not(IsNil))
+			c.Check(a.City.Built, Equals, false)
+			c.Check(a.City.Expanded, Equals, false)
+			c.Check(a.City.OwnerID, Equals, NoPlayerID)
+		}
+	}
+}
+
+func (s *MySuite) TestNonSumerAreas(c *C) {
+	for _, a := range g.Areas {
+		if a.IsNonSumer() {
+			for _, p := range g.Players() {
+				c.Check(p.WorkersIn(a), Equals, 0)
+				c.Check(a.Armies, Equals, 0)
+                                c.Check(a.ArmyOwner(), IsNil)
+			}
+		}
+	}
+}

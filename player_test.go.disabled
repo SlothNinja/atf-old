@@ -1,0 +1,36 @@
+package atf
+
+import . "launchpad.net/gocheck"
+
+func (s *MySuite) TestCompare(c *C) {
+	// No score
+	p1 := g.Players()[0]
+	for _, p := range g.Players()[1:] {
+		c.Check(p.compareByScore(p1), Equals, sn.EqualTo)
+	}
+}
+
+func (s *MySuite) TestPlayers(c *C) {
+	c.Check(len(g.Players()), Equals, 3)
+
+	for _, p := range g.Players() {
+		c.Assert(p, Not(IsNil))
+		c.Check(p, Not(IsNil))
+		c.Check(p.Game(), Equals, g)
+		c.Check(p.Log, Not(IsNil))
+		c.Check(p.Resources[Grain], Equals, 5)
+		c.Check(p.Resources[Textile], Equals, 3)
+		c.Check(p.Resources[Wood], Equals, 1)
+		c.Check(p.Resources[Metal], Equals, 1)
+		c.Check(p.Resources[Tool], Equals, 1)
+		c.Check(p.Resources[Oil], Equals, 1)
+		c.Check(p.Resources[Gold], Equals, 1)
+		c.Check(p.City, Equals, 4)
+		c.Check(p.Expansion, Equals, 4)
+		c.Check(p.Worker, Equals, 10)
+		c.Check(p.WorkerSupply, Equals, 13)
+		c.Check(p.Army, Equals, 0)
+		c.Check(p.ArmySupply, Equals, 20)
+		c.Check(p.empire(), IsNil)
+	}
+}

@@ -1,0 +1,65 @@
+package atf
+
+import (
+	"github.com/gorilla/context"
+
+	. "launchpad.net/gocheck"
+)
+
+func (s *MySuite) TestGetBuyArmyResources(c *C) {
+	cp := g.CurrentPlayer()
+	c.Assert(cp, Not(IsNil))
+	cu := cp.User()
+	c.Assert(cu, Not(IsNil))
+	context.Set(req, "CurrentUser", cu)
+
+	values, err := g.getValues()
+	c.Assert(err, IsNil)
+
+        empty := make(Resources, 8)
+
+        // No resource
+        delete(values, "buy-army-grain")
+        resources := getBuyArmyResources(values)
+        c.Check(resources, DeepEquals, empty)
+
+        // Get Grain
+        values.Set("buy-army-grain", "2")
+        resources = getBuyArmyResources(values)
+        c.Check(resources, DeepEquals, Resources{2, 0, 0, 0, 0, 0, 0, 0})
+
+        // Ignore Wood
+        values.Set("buy-army-wood", "2")
+        resources = getBuyArmyResources(values)
+        c.Check(resources, DeepEquals, Resources{2, 0, 0, 0, 0, 0, 0, 0})
+
+        // Get Metal
+        values.Set("buy-army-metal", "1")
+        resources = getBuyArmyResources(values)
+        c.Check(resources, DeepEquals, Resources{2, 0, 1, 0, 0, 0, 0, 0})
+
+        // Ignore Textiles
+        values.Set("buy-army-textile", "1")
+        resources = getBuyArmyResources(values)
+        c.Check(resources, DeepEquals, Resources{2, 0, 1, 0, 0, 0, 0, 0})
+
+        // Get Tool
+        values.Set("buy-army-tool", "1")
+        resources = getBuyArmyResources(values)
+        c.Check(resources, DeepEquals, Resources{2, 0, 1, 0, 1, 0, 0, 0})
+
+        // Ignore Oil
+        values.Set("buy-army-oil", "3")
+        resources = getBuyArmyResources(values)
+        c.Check(resources, DeepEquals, Resources{2, 0, 1, 0, 1, 0, 0, 0})
+
+        // Ignore Gold
+        values.Set("buy-army-gold", "3")
+        resources = getBuyArmyResources(values)
+        c.Check(resources, DeepEquals, Resources{2, 0, 1, 0, 1, 0, 0, 0})
+
+        // Ignore Lapis
+        values.Set("buy-army-lapis", "3")
+        resources = getBuyArmyResources(values)
+        c.Check(resources, DeepEquals, Resources{2, 0, 1, 0, 1, 0, 0, 0})
+}

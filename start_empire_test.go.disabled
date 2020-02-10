@@ -1,0 +1,93 @@
+package atf
+
+import (
+	"github.com/gorilla/context"
+
+	. "launchpad.net/gocheck"
+)
+
+func (s *MySuite) TestBuyArmies(c *C) {
+	cp := g.CurrentPlayer()
+	c.Assert(cp, Not(IsNil))
+	cu := cp.User()
+	c.Assert(cu, Not(IsNil))
+	context.Set(req, "CurrentUser", cu)
+
+        values, err := g.getValues()
+	c.Assert(err, IsNil)
+
+        g.SelectedAreaID = Akkad
+        // player spent grain
+        values["Resources"] = []string{"2", "0", "0", "0", "1", "0", "0", "0"}
+        grain := cp.Resources[Grain]
+        tool := cp.Resources[Tool]
+        template, err := buyArmies(g)
+        c.Check(cp.Resources[Grain], Equals, grain - 2)
+        c.Check(cp.Resources[Tool], Equals, tool - 1)
+        c.Check(template, Equals, "atf_buy_armies_update.template")
+        c.Check(err, IsNil)
+}
+
+func (s *MySuite) TestValidateBuyArmies(c *C) {
+	cp := g.CurrentPlayer()
+	c.Assert(cp, Not(IsNil))
+	cu := cp.User()
+	c.Assert(cu, Not(IsNil))
+	context.Set(req, "CurrentUser", cu)
+
+        values, err := g.getValues()
+	c.Assert(err, IsNil)
+
+        // Clear values
+        for k, _ := range values {
+                values.Del(k)
+        }
+
+        g.SelectedAreaID = Akkad
+        // player spent more metal than he has
+        values["Resources"] = []string{"0", "0", "2", "0", "0", "0", "0", "0"}
+        res, bought, err := g.validateBuyArmies()
+        c.Check(res, IsNil)
+        c.Check(bought, Equals, 0)
+        c.Check(err.Error(), Equals, "You do not have 2 Metal.\n")
+
+        // player spent grain
+        values["Resources"] = []string{"2", "0", "0", "0", "0", "0", "0", "0"}
+        res, bought, err = g.validateBuyArmies()
+        c.Check(res, DeepEquals, Resources{2, 0, 0, 0, 0, 0, 0, 0})
+        c.Check(err, IsNil)
+        c.Check(bought, Equals, 2)
+
+        // player spent grain and tool
+        values["Resources"] = []string{"2", "0", "0", "0", "1", "0", "0", "0"}
+        res, bought, err = g.validateBuyArmies()
+        c.Check(res, DeepEquals, Resources{2, 0, 0, 0, 1, 0, 0, 0})
+        c.Check(err, IsNil)
+        c.Check(bought, Equals, 5)
+}
+
+//func (g *Game) validateBuyArmies() (Resources, error) {
+//	if err := g.validatePlayerAction(); err != nil {
+//		return nil, err
+//	}
+//
+//	values, err := g.getValues()
+//	if err != nil {
+//		return nil, err
+//	}
+//        g.Debugf("Values: %v", values)
+//
+//        cp := g.CurrentPlayer()
+////        area := g.SelectedArea()
+//        buyArmyResources := getBuyArmyResources(values)
+//        for i, count := range buyArmyResources {
+//                r := Resource(i)
+//                if _, ok := resourceArmyValueMap[r]; count > 0 && !ok {
+//                        return nil, sn.NewVError("You can not use %s to buy armies.", r)
+//                }
+//                if count > cp.Resources[r] {
+//                        return nil, sn.NewVError("You do not have %d %s to buy armies.", count, r)
+//                }
+//        }
+//        return buyArmyResources, nil
+//}

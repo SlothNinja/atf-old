@@ -1,0 +1,53 @@
+package atf
+
+import (
+	//	"fmt"
+	"github.com/gorilla/context"
+	. "launchpad.net/gocheck"
+)
+
+func (s *MySuite) TestActionsPhase(c *C) {
+	g.Phase = NoPhase
+	c.Check(g.Phase != Actions, Equals, true)
+	next, description, err := actionsPhase(g)
+	c.Check(g.Phase, Equals, Actions)
+	c.Check(next, IsNil)
+	c.Check(err, IsNil)
+	c.Check(description, Equals, "")
+}
+
+func (s *MySuite) TestValidatePlayerAction(c *C) {
+	// setup players, current player, and current user
+	p0 := g.Players()[0]
+	c.Assert(p0, Not(IsNil))
+	p1 := g.Players()[1]
+	c.Assert(p1, Not(IsNil))
+	g.setCurrentPlayers(p0)
+	cp := g.CurrentPlayer()
+	c.Assert(cp, Not(IsNil))
+
+	cu := p1.User()
+	c.Assert(cu, Not(IsNil))
+	context.Set(req, "CurrentUser", cu)
+
+	c.Assert(cp.Equal(p0), Equals, true)
+	c.Check(g.CurrentUserIsCurrentPlayerOrAdmin(), Equals, false)
+
+	// current user is not current player
+	err := g.validatePlayerAction()
+	c.Assert(err, Not(IsNil))
+	c.Check(err.Error(), Equals, "Only the current player can perform an action.\n")
+
+	//	// current player has already performed action
+	//	cu = p0.User()
+	//	c.Assert(cu, Not(IsNil))
+	//	context.Set(req, "CurrentUser", cu)
+	//	c.Check(g.CurrentUserIsCurrentPlayerOrAdmin(), Equals, true)
+	//	cp = g.CurrentPlayer()
+	//	c.Assert(cp, Not(IsNil))
+	//	cp.PerformedAction = true
+	//
+	//	err = g.validatePlayerAction()
+	//	c.Assert(err, Not(IsNil))
+	//	c.Check(err.Error(), Equals, fmt.Sprintf("%s has already performed an action.\n", cp.Name()))
+}

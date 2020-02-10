@@ -1,0 +1,110 @@
+package atf
+
+import (
+	"github.com/gorilla/context"
+
+	. "launchpad.net/gocheck"
+)
+
+func (s *MySuite) TestPlaceWorkers(c *C) {
+	cp := g.CurrentPlayer()
+	c.Assert(cp, Not(IsNil))
+	cu := cp.User()
+	c.Assert(cu, Not(IsNil))
+	context.Set(req, "CurrentUser", cu)
+
+        values, err := g.getValues()
+        values.Set("paid-resource", "metal")
+        values.Set("place-workers", "2")
+        g.SelectedAreaID = Akkad
+
+        c.Check(g.SelectedArea().Workers[cp.ID()], Equals, 0)
+        c.Check(cp.Worker, Equals, 10)
+        c.Check(cp.Resources[Metal], Equals, 1)
+        c.Check(cp.PerformedAction, Equals, false)
+        template, err := placeWorkers(g)
+        c.Check(err, IsNil)
+        c.Check(template, Equals, "atf_place_workers_update.template")
+        c.Check(g.SelectedArea().Workers[cp.ID()], Equals, 2)
+        c.Check(cp.Worker, Equals, 8)
+        c.Check(cp.Resources[Metal], Equals, 0)
+        c.Check(cp.PerformedAction, Equals, true)
+}
+
+func (s *MySuite) TestValidatePlaceWorkers(c *C) {
+	cp := g.CurrentPlayer()
+	c.Assert(cp, Not(IsNil))
+	cu := cp.User()
+	c.Assert(cu, Not(IsNil))
+	context.Set(req, "CurrentUser", cu)
+
+        values, err := g.getValues()
+	c.Assert(err, IsNil)
+
+        delete(values, "paid-resource")
+        delete(values, "place-workers")
+
+        g.SelectedAreaID = Akkad
+        // No workers provided
+	values.Set("paid-resource", "grain")
+        _, _, err = g.validatePlaceWorkers()
+        c.Check(err.Error(), Equals, "You must place at least 1 worker.\n")
+
+        // No resource provided by form
+	values.Set("place-workers", "2")
+        delete(values, "paid-resource")
+        _, _, err = g.validatePlaceWorkers()
+        c.Check(err.Error(), Equals, "You must spend a resource to place workers in Akkad.\n")
+
+        // No area
+        g.SelectedAreaID = NoArea
+        _, _, err = g.validatePlaceWorkers()
+        c.Check(err.Error(), Equals, "No area selected.\n")
+
+        // Sumer area selected
+        g.SelectedAreaID = Babylon
+        _, _, err = g.validatePlaceWorkers()
+        c.Check(err.Error(), Equals, "You can't place workers in Sumer.\n")
+
+        // Invalid resource
+        g.SelectedAreaID = Akkad
+	values.Set("paid-resource", "asdf")
+        _, _, err = g.validatePlaceWorkers()
+        c.Check(err.Error(), Equals, "You must spend a resource to place workers in Akkad.\n")
+
+        // Resource insufficient for placed workers
+	values.Set("paid-resource", "grain")
+        _, _, err = g.validatePlaceWorkers()
+        c.Check(err.Error(), Equals, "You tried to place 2 workers, but a Grain permits only up to 1 workers\n")
+
+        // Invalid workers
+	values.Set("place-workers", "asdf")
+        _, _, err = g.validatePlaceWorkers()
+        c.Check(err.Error(), Equals, "You must place at least 1 worker.\n")
+
+        // Don't have resource
+	values.Set("place-workers", "2")
+        cp.Resources[Grain] = 0
+        _, _, err = g.validatePlaceWorkers()
+        c.Check(err.Error(), Equals, "You do not have a Grain to spend.\n")
+
+        // Placed no workers
+	values.Set("place-workers", "0")
+	values.Set("paid-resource", "metal")
+        cp.Worker = 1
+        _, _, err = g.validatePlaceWorkers()
+        c.Check(err.Error(), Equals, "You must place at least 1 worker.\n")
+
+        // Placed more workers than available
+	values.Set("place-workers", "2")
+        cp.Worker = 1
+        _, _, err = g.validatePlaceWorkers()
+        c.Check(err.Error(), Equals, "You tried to place 2 workers, but have only 1 workers available.\n")
+
+        // Placed 2 workers
+        cp.Worker = 4
+        resource, workers, err := g.validatePlaceWorkers()
+        c.Check(err, IsNil)
+        c.Check(resource, Equals, Metal)
+        c.Check(workers, Equals, 2)
+}

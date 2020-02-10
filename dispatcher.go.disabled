@@ -1,0 +1,13 @@
+package atf
+
+type transition func(*Game) (transition, string, error)
+
+func (g *Game) dispatcher(next transition, description string) (err error) {
+	for next != nil {
+                g.CTX().Debugf("Dispatching to %s", description)
+		if next, description, err = next(g); err != nil {
+                        return err
+                }
+	}
+	return nil
+}

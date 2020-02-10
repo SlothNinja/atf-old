@@ -1,0 +1,239 @@
+package atf
+
+import (
+	"github.com/gorilla/context"
+
+	. "launchpad.net/gocheck"
+)
+
+func (s *MySuite) TestValidateBuildCity(c *C) {
+	cp := g.CurrentPlayer()
+	c.Assert(cp, Not(IsNil))
+	cu := cp.User()
+	c.Assert(cu, Not(IsNil))
+	context.Set(req, "CurrentUser", cu)
+
+	// no "area" selected
+	g.SelectedAreaID = NoArea
+	err := g.validateBuildCity()
+	sa := g.SelectedArea()
+	c.Check(sa, IsNil)
+	c.Assert(err, Not(IsNil))
+	c.Check(err.Error(), Equals, "No area selected.\n")
+
+	// "area" is valid, but city built
+	g.SelectedAreaID = Babylon
+	sa = g.SelectedArea()
+	c.Assert(sa, Not(IsNil))
+	c.Check(sa.Name(), Equals, "Babylon")
+	sa.City.Built = true
+	err = g.validateBuildCity()
+	c.Assert(err, Not(IsNil))
+	c.Check(err.Error(), Equals, "The city in Babylon is already built.\n")
+
+	//	// "area" is valid, but cp has no cities
+	//        g.SelectedAreaID = Uruk
+	//        sa = g.SelectedArea()
+	//	cp.City = 0
+	//	err = g.validateBuildCity()
+	//	c.Assert(err, Not(IsNil))
+	//	c.Check(err.Error(), Equals, fmt.Sprintf("%s has no cities to build.  %s must abandon a city first.\n",
+	//		cp.Name(), cp.Name()))
+}
+
+func (s *MySuite) TestBuildSippar(c *C) {
+	cp := g.CurrentPlayer()
+	c.Assert(cp, Not(IsNil))
+	cu := cp.User()
+	c.Assert(cu, Not(IsNil))
+	context.Set(req, "CurrentUser", cu)
+
+	g.SelectedAreaID = Sippar
+	sa := g.SelectedArea()
+	c.Assert(sa, Not(IsNil))
+	c.Check(sa.Name(), Equals, "Sippar")
+
+	c.Check(cp.City, Equals, 4)
+	c.Check(sa.City.Built, Equals, false)
+	c.Check(sa.City.Owner(), IsNil)
+	template, err := buildCity(g)
+	c.Check(err, IsNil)
+	c.Check(template, Equals, "atf_cities_update.template")
+	c.Check(cp.City, Equals, 3)
+	c.Check(sa.City.Built, Equals, true)
+	c.Check(sa.City.Owner(), Equals, cp)
+}
+
+func (s *MySuite) TestBuildCity(c *C) {
+	cp := g.CurrentPlayer()
+	c.Assert(cp, Not(IsNil))
+	cu := cp.User()
+	c.Assert(cu, Not(IsNil))
+	context.Set(req, "CurrentUser", cu)
+
+	g.SelectedAreaID = NoArea
+	c.Check(cp.City, Equals, 4)
+	template, err := buildCity(g)
+	c.Check(err.Error(), Equals, "No area selected.\n")
+	c.Check(template, Equals, "atf_flash_notice.template")
+	c.Check(cp.City, Equals, 4)
+
+	g.SelectedAreaID = Sippar
+	sa := g.SelectedArea()
+	c.Assert(sa, Not(IsNil))
+	c.Check(sa.Name(), Equals, "Sippar")
+
+	c.Check(cp.City, Equals, 4)
+	c.Check(sa.City.Built, Equals, false)
+	c.Check(sa.City.Owner(), IsNil)
+	template, err = buildCity(g)
+	c.Check(err, IsNil)
+	c.Check(template, Equals, "atf_cities_update.template")
+	c.Check(cp.City, Equals, 3)
+	c.Check(sa.City.Built, Equals, true)
+	c.Check(sa.City.Owner(), Equals, cp)
+}
+
+func (s *MySuite) TestBuildEridu(c *C) {
+	cp := g.CurrentPlayer()
+	c.Assert(cp, Not(IsNil))
+	cu := cp.User()
+	c.Assert(cu, Not(IsNil))
+	context.Set(req, "CurrentUser", cu)
+
+	g.SelectedAreaID = Eridu
+	eridu := g.SelectedArea()
+	c.Assert(eridu, Not(IsNil))
+	c.Check(eridu.Name(), Equals, "Eridu")
+
+	// Has no workers in supply
+	cp.WorkerSupply = 0
+	c.Check(cp.WorkerSupply, Equals, 0)
+	c.Check(cp.City, Equals, 4)
+	c.Check(eridu.City.Built, Equals, false)
+	c.Check(eridu.City.Owner(), IsNil)
+	toolmaker := g.Areas[ToolMakers]
+	c.Check(toolmaker.Name(), Equals, "ToolMakers")
+	c.Check(toolmaker.Workers[cp.ID()], Equals, 0)
+
+	template, err := buildCity(g)
+	c.Check(err, IsNil)
+	c.Check(template, Equals, "atf_cities_update.template")
+
+	c.Check(cp.WorkerSupply, Equals, 0)
+	c.Check(cp.City, Equals, 3)
+	c.Check(eridu.City.Built, Equals, true)
+	c.Check(eridu.City.Owner(), Equals, cp)
+	c.Check(toolmaker.Workers[cp.ID()], Equals, 0)
+
+	// Has workers in supply
+	cp.WorkerSupply = 10
+	cp.PerformedAction = false
+	eridu.City.Built = false
+	eridu.City.OwnerID = NoPlayerID
+
+	c.Check(cp.WorkerSupply, Equals, 10)
+	c.Check(cp.City, Equals, 3)
+	c.Check(eridu.City.Built, Equals, false)
+	c.Check(eridu.City.Owner(), IsNil)
+	c.Check(toolmaker.Workers[cp.ID()], Equals, 0)
+
+	template, err = buildCity(g)
+	c.Check(err, IsNil)
+	c.Check(template, Equals, "atf_cities_update.template")
+
+	c.Check(cp.WorkerSupply, Equals, 9)
+	c.Check(cp.City, Equals, 2)
+	c.Check(eridu.City.Built, Equals, true)
+	c.Check(eridu.City.Owner(), Equals, cp)
+	c.Check(toolmaker.Workers[cp.ID()], Equals, 1)
+}
+
+func (s *MySuite) TestBuildUruk(c *C) {
+	cp := g.CurrentPlayer()
+	c.Assert(cp, Not(IsNil))
+	cu := cp.User()
+	c.Assert(cu, Not(IsNil))
+	context.Set(req, "CurrentUser", cu)
+
+	g.SelectedAreaID = Uruk
+	uruk := g.SelectedArea()
+	c.Assert(uruk, Not(IsNil))
+	c.Check(uruk.Name(), Equals, "Uruk")
+
+	// Has no workers
+	cp.WorkerSupply = 0
+	c.Check(cp.WorkerSupply, Equals, 0)
+	c.Check(cp.totalScribes(), Equals, 0)
+	c.Check(cp.City, Equals, 4)
+	c.Check(uruk.City.Built, Equals, false)
+	c.Check(uruk.City.Owner(), IsNil)
+	scribeBox := g.Areas[Scribes]
+	c.Check(scribeBox.Name(), Equals, "Scribes")
+	c.Check(scribeBox.Workers[cp.ID()], Equals, 0)
+
+	template, err := buildCity(g)
+	c.Check(err, IsNil)
+	c.Check(template, Equals, "atf_cities_update.template")
+
+	c.Check(cp.WorkerSupply, Equals, 0)
+	c.Check(cp.City, Equals, 3)
+	c.Check(uruk.City.Built, Equals, true)
+	c.Check(uruk.City.Owner(), Equals, cp)
+	c.Check(scribeBox.Workers[cp.ID()], Equals, 0)
+
+	// Has workers in supply
+	cp.WorkerSupply = 10
+	cp.PerformedAction = false
+	uruk.City.Built = false
+	uruk.City.OwnerID = NoPlayerID
+	newScribeBox := g.Areas[NewScribes]
+
+	c.Check(cp.WorkerSupply, Equals, 10)
+	c.Check(scribeBox.Workers[cp.ID()], Equals, 0)
+	c.Check(cp.City, Equals, 3)
+	c.Check(uruk.City.Built, Equals, false)
+	c.Check(uruk.City.Owner(), IsNil)
+	c.Check(scribeBox.Workers[cp.ID()], Equals, 0)
+	c.Check(newScribeBox.Workers[cp.ID()], Equals, 0)
+
+	template, err = buildCity(g)
+	c.Check(err, IsNil)
+	c.Check(template, Equals, "atf_cities_update.template")
+
+	c.Check(cp.WorkerSupply, Equals, 9)
+	c.Check(cp.City, Equals, 2)
+	c.Check(uruk.City.Built, Equals, true)
+	c.Check(uruk.City.Owner(), Equals, cp)
+	c.Check(scribeBox.Workers[cp.ID()], Equals, 0)
+	c.Check(newScribeBox.Workers[cp.ID()], Equals, 1)
+
+	// Already has two scribes
+	cp.PerformedAction = false
+	uruk.City.Built = false
+	uruk.City.OwnerID = NoPlayerID
+	usedScribeBox := g.Areas[UsedScribes]
+	usedScribeBox.Workers[cp.ID()] = 1
+	scribeBox.Workers[cp.ID()] = 1
+	newScribeBox.Workers[cp.ID()] = 0
+
+	c.Check(cp.WorkerSupply, Equals, 9)
+	c.Check(scribeBox.Workers[cp.ID()], Equals, 1)
+	c.Check(usedScribeBox.Workers[cp.ID()], Equals, 1)
+	c.Check(cp.totalScribes(), Equals, 2)
+	c.Check(cp.City, Equals, 2)
+	c.Check(uruk.City.Built, Equals, false)
+	c.Check(uruk.City.Owner(), IsNil)
+
+	template, err = buildCity(g)
+	c.Check(err, IsNil)
+	c.Check(template, Equals, "atf_cities_update.template")
+
+	c.Check(cp.WorkerSupply, Equals, 9)
+	c.Check(cp.City, Equals, 1)
+	c.Check(uruk.City.Built, Equals, true)
+	c.Check(uruk.City.Owner(), Equals, cp)
+	c.Check(scribeBox.Workers[cp.ID()], Equals, 1)
+	c.Check(usedScribeBox.Workers[cp.ID()], Equals, 1)
+	c.Check(cp.totalScribes(), Equals, 2)
+}

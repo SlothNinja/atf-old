@@ -1,0 +1,103 @@
+package atf
+
+import . "launchpad.net/gocheck"
+
+type grainIncomeTest struct {
+	in, out [3]int
+}
+
+var grainIncomeTests = []*grainIncomeTest{
+	{[3]int{0, 0, 0}, [3]int{0, 0, 0}},
+	{[3]int{1, 1, 1}, [3]int{5, 5, 5}},
+	{[3]int{0, 1, 1}, [3]int{0, 6, 6}},
+	{[3]int{0, 0, 1}, [3]int{0, 0, 6}},
+	{[3]int{0, 1, 0}, [3]int{0, 6, 0}},
+	{[3]int{1, 0, 0}, [3]int{6, 0, 0}},
+	{[3]int{1, 0, 1}, [3]int{6, 0, 6}},
+	{[3]int{1, 1, 0}, [3]int{6, 6, 0}},
+	{[3]int{2, 2, 1}, [3]int{6, 6, 4}},
+	{[3]int{1, 2, 2}, [3]int{4, 6, 6}},
+	{[3]int{2, 1, 2}, [3]int{6, 4, 6}},
+	{[3]int{1, 2, 3}, [3]int{3, 4, 6}},
+	{[3]int{1, 3, 2}, [3]int{3, 6, 4}},
+	{[3]int{2, 1, 3}, [3]int{4, 3, 6}},
+	{[3]int{2, 3, 1}, [3]int{4, 6, 3}},
+	{[3]int{3, 2, 1}, [3]int{6, 4, 3}},
+	{[3]int{3, 1, 2}, [3]int{6, 3, 4}},
+	{[3]int{3, 2, 2}, [3]int{6, 4, 4}},
+	{[3]int{2, 3, 2}, [3]int{4, 6, 4}},
+	{[3]int{2, 2, 3}, [3]int{4, 4, 6}},
+}
+
+func (s *MySuite) TestGrainIncome(c *C) {
+	for _, t := range grainIncomeTests {
+		for i, p := range g.Players() {
+			g.Areas[Irrigation].Workers[p.ID()] = t.in[i]
+		}
+		for i, p := range g.Players() {
+			c.Check(p.grainIncome(), Equals, t.out[i])
+		}
+	}
+}
+
+type textileIncomeTest struct {
+	in, out [3]int
+}
+
+var textileIncomeTests = []*textileIncomeTest{
+	{[3]int{0, 0, 0}, [3]int{0, 0, 0}},
+	{[3]int{1, 1, 1}, [3]int{3, 3, 3}},
+	{[3]int{0, 1, 1}, [3]int{0, 3, 3}},
+	{[3]int{0, 0, 1}, [3]int{0, 0, 3}},
+	{[3]int{0, 1, 0}, [3]int{0, 3, 0}},
+	{[3]int{1, 0, 0}, [3]int{3, 0, 0}},
+	{[3]int{1, 0, 1}, [3]int{3, 0, 3}},
+	{[3]int{1, 1, 0}, [3]int{3, 3, 0}},
+	{[3]int{2, 2, 1}, [3]int{3, 3, 2}},
+	{[3]int{1, 2, 2}, [3]int{2, 3, 3}},
+	{[3]int{2, 1, 2}, [3]int{3, 2, 3}},
+	{[3]int{1, 2, 3}, [3]int{1, 2, 3}},
+	{[3]int{1, 3, 2}, [3]int{1, 3, 2}},
+	{[3]int{2, 1, 3}, [3]int{2, 1, 3}},
+	{[3]int{2, 3, 1}, [3]int{2, 3, 1}},
+	{[3]int{3, 2, 1}, [3]int{3, 2, 1}},
+	{[3]int{3, 1, 2}, [3]int{3, 1, 2}},
+	{[3]int{3, 2, 2}, [3]int{3, 2, 2}},
+	{[3]int{2, 3, 2}, [3]int{2, 3, 2}},
+	{[3]int{2, 2, 3}, [3]int{2, 2, 3}},
+}
+
+func (s *MySuite) TestTextileIncome(c *C) {
+	for _, t := range textileIncomeTests {
+		for i, p := range g.Players() {
+			g.Areas[Weaving].Workers[p.ID()] = t.in[i]
+		}
+		for i, p := range g.Players() {
+			c.Check(p.textileIncome(), Equals, t.out[i])
+		}
+	}
+}
+
+type workerIncomeTest struct {
+	in, out [2]int
+}
+
+var workerIncomeTests = []*workerIncomeTest{
+	{[2]int{23, 2}, [2]int{15, 10}},
+	{[2]int{8, 2}, [2]int{0, 10}},
+	{[2]int{7, 2}, [2]int{0, 9}},
+	{[2]int{0, 2}, [2]int{0, 2}},
+	{[2]int{0, 0}, [2]int{0, 0}},
+}
+
+func (s *MySuite) TestWorkerIncome(c *C) {
+	for _, t := range workerIncomeTests {
+		for _, p := range g.Players() {
+			p.WorkerSupply = t.in[0]
+			p.Worker = t.in[1]
+			p.collectWorkers()
+			c.Check(p.WorkerSupply, Equals, t.out[0])
+			c.Check(p.Worker, Equals, t.out[1])
+		}
+	}
+}
